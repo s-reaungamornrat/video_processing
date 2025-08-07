@@ -10,7 +10,7 @@ from torchvision import tv_tensors
 from torchvision.transforms.v2 import functional as F
 from torchvision.transforms import v2 as T
 
-def get_transform(is_train):#, image_mean, image_std, min_size, max_size, interpolation=torchvision.transforms.InterpolationMode.BILINEAR):
+def get_transform(is_train, image_mean, image_std, min_size, max_size, interpolation=torchvision.transforms.InterpolationMode.BILINEAR):
     '''
     Input:
     is_train (bool): whether to get transform for training data augmentation
@@ -24,11 +24,11 @@ def get_transform(is_train):#, image_mean, image_std, min_size, max_size, interp
     transforms=[]
     if is_train:
         transforms.append(T.RandomHorizontalFlip(0.5))
-        #transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
-    #else: transforms.append(T.Resize(interpolation=interpolation, max_size=max_size))
+        transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
+    else: transforms.append(T.Resize(interpolation=interpolation, max_size=max_size))
     transforms.append(T.ToDtype(torch.float, scale=True))
     transforms.append(T.ToPureTensor())
-    #transforms.append(T.Normalize(mean=image_mean, std=image_std))
+    transforms.append(T.Normalize(mean=image_mean, std=image_std))
     return T.Compose(transforms)
 
 
