@@ -55,24 +55,24 @@ def display_image_overlay(image, mask=None, annotation=None, axis_off=True):
     if mask is not None: axs[0].imshow(image.permute(1,2,0)) # HxWxC / YxXxC
     else: axs.imshow(image.permute(1,2,0)) # HxWxC / YxXxC
     if annotation is not None:
-    for i, (bbox, color) in enumerate(zip(annotation['bbox'], colours)):
-        width,height=[e-s for e, s in zip(bbox[-1], bbox[0])]
-        # Create a Rectangle patch
-        rect = patches.Rectangle([x-1 for x in bbox[0]], width,height, linewidth=2,edgecolor=color, facecolor='none')
-        # Add the patch to the Axes
-        axs[0].add_patch(rect)
-        axs[0].text(bbox[0][0],bbox[-1][1], annotation['label'][i], fontdict=font)
-        if axis_off: axs[0].set_axis_off()
+        for i, (bbox, color) in enumerate(zip(annotation['bbox'], colours)):
+            width,height=[e-s for e, s in zip(bbox[-1], bbox[0])]
+            # Create a Rectangle patch
+            rect = patches.Rectangle([x-1 for x in bbox[0]], width,height, linewidth=2,edgecolor=color, facecolor='none')
+            # Add the patch to the Axes
+            axs[0].add_patch(rect)
+            axs[0].text(bbox[0][0],bbox[-1][1], annotation['label'][i], fontdict=font)
+            if axis_off: axs[0].set_axis_off()
     
     if mask is not None: axs[1].imshow(mask.permute(1,2,0)) # HxWxC / YxXxC
     if annotation is not None:
-    for i, (bbox, color) in enumerate(zip(annotation['bbox'], colours)):
-        width,height=[e-s for e, s in zip(bbox[-1], bbox[0])]
-        # Create a Rectangle patch
-        rect = patches.Rectangle([x-1 for x in bbox[0]], width,height, linewidth=2,edgecolor=color, facecolor='none')
-        # Add the patch to the Axes
-        axs[1].add_patch(rect)
-        axs[1].text(bbox[0][0],bbox[-1][1], annotation['label'][i], fontdict=font)
-        if axis_off: axs[1].set_axis_off()
+        for i, (bbox, color) in enumerate(zip(annotation['bbox'], colours)):
+            width,height=[e-s for e, s in zip(bbox[-1], bbox[0])]
+            # Create a Rectangle patch
+            rect = patches.Rectangle([x-1 for x in bbox[0]], width,height, linewidth=2,edgecolor=color, facecolor='none')
+            # Add the patch to the Axes
+            axs[1].add_patch(rect)
+            axs[1].text(bbox[0][0],bbox[-1][1], annotation['label'][i], fontdict=font)
+            if axis_off: axs[1].set_axis_off()
     plt.show(block=True)
      
