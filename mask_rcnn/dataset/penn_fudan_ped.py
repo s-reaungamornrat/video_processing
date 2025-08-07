@@ -19,11 +19,13 @@ def get_transform(is_train, image_mean, image_std, min_size, max_size, interpola
     min_size (int): minimum image size, e.g., model.transform.min_size
     max_size (int): maximum image size, e.g., model.transform.max_size
     '''
+    # We note that resizing and image normalization are done within forward function inside the model, 
+    # see line#96 in https://github.com/pytorch/vision/blob/main/torchvision/models/detection/generalized_rcnn.py
     transforms=[]
     if is_train:
         transforms.append(T.RandomHorizontalFlip(0.5))
-        transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
-    else: transforms.append(T.Resize(interpolation=interpolation, max_size=max_size))
+        #transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
+    #else: transforms.append(T.Resize(interpolation=interpolation, max_size=max_size))
     transforms.append(T.ToDtype(torch.float, scale=True))
     transforms.append(T.ToPureTensor())
     transforms.append(T.Normalize(mean=image_mean, std=image_std))
