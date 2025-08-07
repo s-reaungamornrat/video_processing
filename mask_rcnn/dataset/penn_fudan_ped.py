@@ -26,7 +26,7 @@ def get_transform(is_train):#, image_mean, image_std, min_size, max_size, interp
         transforms.append(T.RandomHorizontalFlip(0.5))
         #transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
     #else: transforms.append(T.Resize(interpolation=interpolation, max_size=max_size))
-    transforms.append(T.ToDtype(torch.float, scale=False))
+    transforms.append(T.ToDtype(torch.float, scale=True))
     transforms.append(T.ToPureTensor())
     #transforms.append(T.Normalize(mean=image_mean, std=image_std))
     return T.Compose(transforms)
