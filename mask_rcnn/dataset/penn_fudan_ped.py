@@ -21,8 +21,8 @@ def get_transform(is_train, image_mean, image_std, min_size, max_size, interpola
     '''
     transforms=[]
     if is_train:
-    transforms.append(T.RandomHorizontalFlip(0.5))
-    transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
+        transforms.append(T.RandomHorizontalFlip(0.5))
+        transforms.append(T.RandomShortestSize(min_size=min_size, max_size=max_size, interpolation=interpolation))
     else: transforms.append(T.Resize(interpolation=interpolation, max_size=max_size))
     transforms.append(T.ToDtype(torch.float, scale=True))
     transforms.append(T.ToPureTensor())
@@ -33,6 +33,14 @@ def get_transform(is_train, image_mean, image_std, min_size, max_size, interpola
 class PennFudanDataset(torch.utils.data.Dataset):
 
     def __init__(self, root, image_dirname, mask_dirname, annotation_dirname, transforms):
+        '''
+        Input:
+            root (str): path to data folder
+            image_dirname (str): name of subfolder containing images
+            mask_dirname (str): name of subfolder containing masks
+            annotation_dirname (str): name of subfolder containing annotations
+            transforms (callable): image transformation for preprocessing and augmentation 
+        '''
 
         self.transforms=transforms
         self.image_dirpath=os.path.join(root, image_dirname).encode('utf-8')
