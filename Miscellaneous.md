@@ -1,3 +1,10 @@
+## Jupyter
+
+Data rate exceed limit
+```
+jupyter notebook --NotebookApp.iopub_data_rate_limit=1.0e10 
+```
+
 ## Selection using indices
 
 Assume we want to index into batched tensor. See below on how to do so
