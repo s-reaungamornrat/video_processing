@@ -34,7 +34,7 @@ def get_transform(is_train):#, image_mean, image_std, min_size, max_size, interp
 
 class PennFudanDataset(torch.utils.data.Dataset):
 
-    def __init__(self, root, image_dirname, mask_dirname, annotation_dirname, transforms):
+    def __init__(self, root, image_dirname, mask_dirname, annotation_dirname, transforms, indices=None):
         '''
         Input:
             root (str): path to data folder
@@ -42,6 +42,7 @@ class PennFudanDataset(torch.utils.data.Dataset):
             mask_dirname (str): name of subfolder containing masks
             annotation_dirname (str): name of subfolder containing annotations
             transforms (callable): image transformation for preprocessing and augmentation 
+            indices (sequence): indices to data used
         '''
 
         self.transforms=transforms
@@ -53,6 +54,10 @@ class PennFudanDataset(torch.utils.data.Dataset):
         self.image_fnames=np.asarray(sorted(s.encode('utf-8') for s in os.listdir(self.image_dirpath.decode('utf-8')))) # decode s.decode('utf-8')
         self.mask_fnames=np.asarray(sorted(s.encode('utf-8') for s in os.listdir(self.mask_dirpath.decode('utf-8')))) # decode s.decode('utf-8')
         self.bbox_fnames=np.asarray(sorted(s.encode('utf-8') for s in os.listdir(self.annotation_dirpath.decode('utf-8')))) # decode s.decode('utf-8')
+        if max(indices)<len(self.image_fnames):
+            self.image_fnames=[self.image_fnames[idx] for idx in indices]
+            self.mask_fnames=[self.mask_fnames[idx] for idx in indices]
+            self.bbox_fnames=[self.bbox_fnames[idx] for idx in indices]
 
         # make sure that files are ordered consistently
         for im, msk, bb in zip(self.image_fnames, self.mask_fnames, self.bbox_fnames):
