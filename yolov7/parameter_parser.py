@@ -36,6 +36,7 @@ parser.add_argument('--artifact_alias', type=str, default='latest', help='versio
 parser.add_argument('--v5-metric', action='store_true', help='assume maximum recall as 1 in AP calculation')
 
 parser.add_argument('--correct-exif', action='store_true', help='whether to correct EXIF orientation')
+parser.add_argument('--n-val-data', type=int, default=None, help='limit number of validation data')
 parser.add_argument('--n-training-data', type=int, default=None, help='limit number of training data')
 parser.add_argument('--data-dirpath', type=str, default=None, help='main data directory containing labels/ and images/ folders')
 parser.add_argument('--output-dirpath', type=str, default=None, help='output directory')

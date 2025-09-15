@@ -42,16 +42,18 @@ class LoadImagesAndLabels(torch.utils.data.Dataset):
             label_filepaths.append(label_fpath if label_fpath.is_file() else None)
 
         cache_path=Path(label_filepaths[0]).parent.with_suffix('.cache') # store preparsing labels from last time
+        print(f'In dataset.coco_dataset.__init__ save cache to {cache_path} cache_path.is_file() {cache_path.is_file()}')
         if cache_path.is_file():
             cache, exists=torch.load(cache_path, weights_only=False), True
         else: # we parse label file and store it in cache for quick load next time
+            print(f'In dataset.coco_dataset.__init__ image_filepaths {image_filepaths[:5]}')
             cache=parse_label_files(image_filepaths=image_filepaths, label_filepaths=label_filepaths)
             torch.save(cache, cache_path)
-        
+            
         if 'info' in cache: cache.pop('info');
         if 'hash' in cache: cache.pop('hash')
         labels, shapes, self.segments=zip(*cache.values())
-        self.labels=labels
+        self.labels=labels # list of [class, (x,y,w,h)] where the later are normalized and (x,y) is the box center and (w,h) is width/height
         self.image_sizes=np.array(shapes, dtype=np.float64) # Nx2 where N is the number of images and 2 for width, height in this order
         self.image_filepaths, self.label_filepaths=[],[]
         for im_fpath in cache.keys():

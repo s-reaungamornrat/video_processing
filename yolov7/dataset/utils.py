@@ -6,6 +6,7 @@ from PIL import Image, ImageOps, ExifTags
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']  # acceptable image suffixes
 
 from collections import OrderedDict
+from video_processing.yolov7.dataset.coords import xyxy2xywh
 
 # Get orientation exif tag
 for orientation in ExifTags.TAGS.keys():
