@@ -10,11 +10,11 @@ def check_anchor_order(m):
         m (callable): detection module, e.g., yolov7.models.common.IAuxDetect
     '''
     # check anchor order against stride order 
-    # nlx1xna//2x1x1x2 -> Lx1xAx1x1x2 where 2 is for height, width or width,height, we need to check
+    # nlx1xna//2x1x1x2 -> Lx1xAx1x1x2 where 2 is for width,height  (this exact order)
     # compute anchor areas
     areas=m.anchor_grid.prod(dim=-1).view(-1) # nl*(na//2) -> L*A
     diff_areas=areas[-1]-areas[0]
-    diff_strdes=m.stride[-1]-m.stride[0]
+    diff_strdes=m.stride[-1]-m.stride[0] # Note ***stride is equal for both width and height***
     if diff_strdes.sign()!=diff_areas.sign(): # if not same ordering reorder them
         m.anchor_grid=m.anchor_grid.flip(dims=[0])
         m.anchors=m.anchors.flip(dims=[0])
@@ -168,46 +168,54 @@ class IAuxDetect(nn.Module):
         '''
         Args:
             nc (int): number of object classes
-            anchors (sequence): anchors locations
-            ch (): channel
+            anchors (list[list[int]]): 3 pairs of anchor width/heights for small, medium, and large bounding boxes per level,
+                e.g., [[19,27,  44,40,  38,94], 
+                       [96,68,  86,152,  180,137], 
+                       [140,301,  303,264,  238,542], 
+                       [436,615,  739,380,  925,792]]
+            ch (list[int]): list of input channels for each level for its m and m2 modules, e.g., 
+                [256, 512, 768, 1024, 320, 640, 960, 1280] where the first 4 are input channels for 
+                each level of m and the remainings are the same for m2
         '''
         super(IAuxDetect, self).__init__()
         self.nc=nc # number of classes
         self.no=nc+5 # number of output per anchors
         self.nl=len(anchors) # number of detection layers
-        self.na=len(anchors[0]) # number of 2*anchors where 2 is for width and height (or height and width) 
+        self.na=len(anchors[0])//2 # number of anchors
         self.grid=[torch.zeros(1)]*self.nl # init grid
-        # nlxna//2x2 -> LxAx2 where 2 is for height, width or width,height, we need to check
         a=torch.tensor(anchors).float().view(self.nl, -1, 2)
-        self.register_buffer('anchors', a) # nlxna//2x2 -> LxAx2 
-         # nlx1xna//2x1x1x2 -> Lx1xAx1x1x2 where 2 is for height, width or width,height, we need to check
+        self.register_buffer('anchors', a) # shape nl, na, 2 
+        # nl 1 na 1 1 2 
         self.register_buffer('anchor_grid', a.clone().view(self.nl, 1, -1, 1, 1, 2))
         print(f'In IAxDetect nl: {self.nl} na: {self.na}')
-        print(f'In IAxDetect anchors: {self.anchors.shape} {self.nl}x{self.na//2}x{2}')
-        print(f'In IAxDetect anchor_grid: {self.anchor_grid.shape} {self.nl}x1x{self.na//2}x1x1x{2}')
+        print(f'In IAxDetect anchors: {self.anchors.shape} {self.nl}x{self.na}x{2}')
+        print(f'In IAxDetect anchor_grid: {self.anchor_grid.shape} {self.nl}x1x{self.na}x1x1x{2}')
         self.m=nn.ModuleList(nn.Conv2d(x, self.no*self.na, 1) for x in ch[:self.nl]) # output conv
         self.m2=nn.ModuleList(nn.Conv2d(x, self.no*self.na, 1) for x in ch[self.nl:]) # output conv
 
         self.ia=nn.ModuleList(ImplicitA(x) for x in ch[:self.nl])
         self.im=nn.ModuleList(ImplicitM(self.no*self.na) for _ in ch[:self.nl])
     def forward(self, x, verbose=False):
+        '''
+        Args:
+            x (list[Tensor])
+        '''
         ## see https://github.com/WongKinYiu/yolov7/blob/main/models/yolo.py#L116
         z=[]
         self.training|=self.export
         for i in range(self.nl):
-            if verbose: 
+            if verbose:
                 print(i, '-'*100)
-                print('\tx[i] ', x[i].shape,  ' self.m[i] ', self.m[i])
+                print('\tx[i] ', x[i].shape,  ' detector.m[i] ', detector.m[i])
             x[i]=self.m[i](self.ia[i](x[i]))
             x[i]=self.im[i](x[i])
             if verbose: print('\tx[i] ', x[i].shape)
             bs,_,ny,nx=x[i].shape
             # BxAxHxWxO where A=number anchors and O is number of classes+5 (where 5 is for bbox coordinate and objectness score) 
             x[i]=x[i].view(bs, self.na, self.no, ny, nx).permute(0,1,3,4,2).contiguous() 
-            if verbose:
-                print('\tx[i] ', x[i].shape)
-                print('\ti+nl ', i+self.nl)
-                print('\tx[i+self.nl] ', x[i+self.nl].shape,  ' self.m2[i] ', self.m2[i])
+            if verbose:print('\tx[i] ', x[i].shape,'\n\ti+nl ', i+self.nl)
+        
+            if verbose: print('\tx[i+self.nl] ', x[i+self.nl].shape,  ' self.m2[i] ', self.m2[i])
             x[i+self.nl]=self.m2[i](x[i+self.nl])
             if verbose: print('\tx[i+self.nl] ', x[i+self.nl].shape)
             # BxAxHxWxO where A=number anchors and O is number of classes+5 (where 5 is for bbox coordinate and objectness score) 
@@ -218,12 +226,31 @@ class IAuxDetect(nn.Module):
                     print('\tself.grid[i].shape ', self.grid[i].shape)
                     print('\tself.grid[i].shape[2:4] ', self.grid[i].shape[2:4], ' x[i].shape[2:4] ', x[i].shape[2:4])
                 if self.grid[i].shape[2:4]!=x[i].shape[2:4]:
+                    # feature map grid
                     self.grid[i]=make_grid(nx=nx, ny=ny).to(x[i].device) # 1x1xHxWx2
                 if verbose: print('\tself.grid[i].shape ', self.grid[i].shape )
                 y=x[i].sigmoid()
-                if verbose:
+                if verbose: 
                     print('\tx[i] ', x[i].min().item(), x[i].max().item())
-                    print('\ty ', y.min().item(), y.max().item() )
-                raise NotImplementedError('Please implement after determine stride')
+                    print('\ty ', y.shape, y.min().item(), y.max().item() )
+                    print('\tstride ', self.stride[i])
+                if not torch.onnx.is_in_onnx_export():
+                    # xy coordinates of bounding boxes
+                    #               BxAxHxWx2        1x1xHxWx2  
+                    y[...,0:2]=(2.*y[...,0:2] -0.5 + self.grid[i])*self.stride[i]
+                    # width and height of bounding boxes
+                    #              BxAxHxWx2             1xAx1x1x2
+                    y[...,2:4]=( (2.*y[...,2:4])**2. ) * self.anchor_grid[i]
+                else:
+                    # split the 4th dim of BxAxHxWxO into BxAxHxWx2 of xy, BxAxHxWx2 of width/height, 
+                    # and BxAxHxWx(Nc+1) of objectness and Nc for number of classes
+                    xy,wh,confidence=y.split((2,2,self.nc+1), dim=4)
+                    if verbose: print('xy ', xy.shape, ' wh ', wh.shape, ' confidence ', confidence.shape)
+                    xy=xy*(2.* self.stride[i])+(self.stride[i]*(self.grid[i]-0.5))
+                    wh=wh**2. * (4.*self.anchor_grid[i].data)
+                    y=torch.cat([xy,wh,confidence], dim=4)
+                    
+                z.append(y.view(bs, -1, self.no)) # BxAxHxWxO -> Bx(AHW)xO
+                
         return x if self.training else (torch.cat(z, 1), x[:self.nl])
         

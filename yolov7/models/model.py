@@ -62,7 +62,8 @@ class Model(nn.Module):
         if verbose:
             print('m.anchors in pixels ', m.anchors.shape, m.anchors)
             print('m.stride ', m.stride.shape, m.stride)
-        # it seems anchors define LxAx2 where 2 is for height and width 
+        # **** anchors define LxAx2 where 2 is for width and height while stride is defined for height and width ****
+        # this is not correct if stride does not have equal value for width and height
         # Here we convert anchor definition from pixel unit to feature map space where each stridexstride represent 1 grid cell
         m.anchors/=m.stride.view(-1, 1, 1) # LxAx2 /= Lx1x1 turns into grid cells for each corresponding scale/level
         if verbose: print('m.anchors in grid cells ', m.anchors.shape, m.anchors)

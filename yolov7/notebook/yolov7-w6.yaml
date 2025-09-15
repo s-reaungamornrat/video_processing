@@ -3,7 +3,7 @@ nc: 80  # number of classes
 depth_multiple: 1.0  # model depth multiple
 width_multiple: 1.0  # layer channel multiple
 
-# anchors defined as a pair of fixed width and height, 
+# anchors defined as a pair of fixed width and height (in the exact ordering width and then height), 
 # and 3 anchors per scale/level for small, medium and large object
 anchors:
   - [ 19,27,  44,40,  38,94 ]  # P3/8  
