@@ -1,7 +1,30 @@
 import torch
 import torch.nn as nn
 
+import numpy as np
 
+def labels_to_class_weights(labels, n_classes):
+    '''
+    Compute class weight which is the inverse frequency of training labels
+    Args:
+        labels (tuple[ndarray[float]]): labels per image, each Nx5 where N is the number of objects and 5 for class object, x,y,w,h
+            with (x,y) is a normalized box center and (w,h) is a normalized width,height
+        n_classes (int): number of classes
+    '''
+    # check whether labels have been loaded
+    if len(labels)==0 or labels[0] is None: return torch.Tensor()
+
+    labels=np.concatenate(labels, axis=0) # Nx5 where N is boxes from all data in dataset
+    classes=labels[:,0].astype(np.int32)
+    frequency=np.bincount(classes, minlength=n_classes)
+    print('frequency ', frequency)
+    # replace empty frequency with 1
+    frequency[frequency==0]=1
+    weights=1/frequency # weight is the inverse class frequency
+    # normalize so weight sum to 1
+    weights/=weights.sum()
+    return torch.from_numpy(weights)
+    
 def setup_optimizer(model, learning_rate, momentum, weight_decay):
     '''
     Setup optimizer by avoiding imposing weight decay on batchnorm as well as bias. We avoid imposing weight decay on bias since bias represent 

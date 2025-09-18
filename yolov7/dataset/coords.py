@@ -1,6 +1,20 @@
 import torch
 import numpy as np
 
+def xywh2xyxy(x):
+    '''
+    Convert x,y,w,h where (x,y) is the box center and (w,h) is the width and height to x1,y1,x2,y2 where
+    (x1,y1) is the top left corner of the boxes and (x2,y2) is the bottom right corner
+    Args:
+        x (Tensor): Nx4 where N is the number of boxes and 4 for x,y,w,h
+    '''
+    if len(x)==0: return x
+    y=x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
+    y[:,0]=x[:,0] - x[:,2]/2 # top left x
+    y[:,1]=x[:,1] - x[:,3]/2 # top left y
+    y[:,2]=x[:,0] + x[:,2]/2 # bottom right x
+    y[:,3]=x[:,1] + x[:,3]/2 # bottom right y
+    return y
 def normalized_xy2xy(x, w, h, shift_x=0., shift_y=0.):
     '''
     Convert normalized pixel unit to pixel unit by multiplying by width and height
