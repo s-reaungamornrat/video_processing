@@ -171,7 +171,7 @@ def matched_prediction_per_level_per_image(indices, anch, prediction, batch_inde
     return pxyxys, p_obj, p_cls, from_which_layer, all_img_idx,all_anch_idx,all_gj,all_gi, all_anch
 
 
-def determine_matching_target_for_auxillary_heads(prediction, targets, indices, anch, stride, image_size, n_classes):
+def determine_matching_targets(prediction, targets, indices, anch, stride, image_size, n_classes):
     '''
     This function answers the question `who is responsible for detecting what?`. It dynamically assigns anchors and feature-map cells to ground
     truth boxes so the network learns which predictions should fire for each object. Here, we compute IOU and class prediction losses to 
