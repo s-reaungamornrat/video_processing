@@ -33,6 +33,33 @@ def normalized_xy2xy(x, w, h, shift_x=0., shift_y=0.):
     y[:,1]=h*x[:,1]+shift_y 
     return y
 
+def adjust_coords(input_image_size, boxes, original_image_size, size_factor, shift):
+    '''
+    Correct boxes coordinates to fit original image size. In other words, change boxe coordinates from being relative 
+    to input_image_size to being relative to original image size. Inverse of dataset.coords.normalized_xy2xy
+    Args:
+        input_image_size (tuple[int]): size of input image to model, H, W
+        boxes (Tensor[float]): Nx4 where N is the number of boxes and 4 for x1,y1,x2,y2 in pixel units
+        original_image_size (tuple[int]): size of original image (H,W)
+        size_factor (tuple[float]): original_image_size/input_image_size for H and W
+        shift (tuple[float]): shift of boxes along x, y
+    Returns: 
+        adjusted_boxes (Tensor[float]): Nx4 where N is the number of boxes and 4 for x1,y1,x2,y2 in pixel units
+    '''
+    if shift is None: shift=(0.,0.)
+    if size_factor is None: size_factor=[n/o for n,o in zip(input_image_size, original_image_size)]
+    # assert size_factor[0]==size_factor[1], f'{size_factor} must be the same'
+
+    boxes=boxes.clone()
+    boxes[:,[0,2]]-=shift[0]
+    boxes[:,[1,3]]-=shift[1]
+    boxes[:,[0,2]]/=size_factor[1]
+    boxes[:,[1,3]]/=size_factor[0]
+    boxes[:,[0,2]]=torch.clamp(boxes[:,[0,2]], min=0, max=original_image_size[-1])
+    boxes[:,[1,3]]=torch.clamp(boxes[:,[1,3]],min=0, max=original_image_size[0])
+
+    return boxes
+
 def xyxy2xywh(x):
     '''
     Convert Nx4 ndarray of [x1,y1,x2,y2] to [x,y,w,h] where x,y are the box center and (x1,y1) is top-left corner and

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from video_processing.yolov7.utils.general import make_grid
+
 def check_anchor_order(m):
     '''
     Check whether anchors have been ordered in the same order as stride. For example, if strides ordered from small to large,
@@ -199,6 +201,11 @@ class IAuxDetect(nn.Module):
         '''
         Args:
             x (list[Tensor])
+        Returns:
+            z (Tensor[float]): Bx(AHW)xO output predictions where B is batch size, A is the number of anchors, O is output dimension
+                of x,y,w,h,obj,class_1, ..., class_nc with (x,y,w,h) in pixel units where (x,y) is the box center and (w,h) is width,height
+            x (list[Tensor]): sequence of outputs from multiresolution main heads, (followed by multiresolution auxillary heads if training), 
+                each is BxAxHxWxO and sorted from high-resolution features to low-resolution features (i.e., features with large HW first)
         '''
         ## see https://github.com/WongKinYiu/yolov7/blob/main/models/yolo.py#L116
         z=[]

@@ -108,6 +108,7 @@ def data_to_target_size(image, labels, target_size, color=(114,114,114), scale_u
     Returns:
         image (ndarray): HxWx3 uint8 image array
         labels (ndarray/Tensor): Nx5 where N is the number of boxes and 5 is for class, (x1, y1, x2, y2) in pixel unit
+        shift (tuple[float]): shift along x and y
     '''
     image_size=image.shape[:2] # H W
     if isinstance(target_size, numbers.Number): target_size=[target_size, target_size]
@@ -146,4 +147,4 @@ def data_to_target_size(image, labels, target_size, color=(114,114,114), scale_u
     labels[:,[1,3]]=labels[:,[1,3]].clip(min=0, max=image.shape[1]-1) # width
     labels[:,[2,4]]=labels[:,[2,4]].clip(min=0, max=image.shape[0]-1) # height
     
-    return image, labels
+    return image, labels, (shift_x, shift_y)

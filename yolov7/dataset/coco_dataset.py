@@ -71,21 +71,25 @@ class LoadImagesAndLabels(torch.utils.data.Dataset):
             labels_out (Tensor): Nx6 where N is the number of boxes and 6 is for [0, object-class, (x,y,w,h)] where
                 (x,y) is the normalized center of boxes and (w,h) is the normalized width and height
             image_fpath (str): image file path
+            shapes (tuple): ((H0,W0), (factor_w, factor_h), (shift_x, shift_y)) where H0,W0 are original image size,
+                            (factor_w, factor_h) is the ratio of new/original for width and height and 
+                            (shift_x, shift_y) is the shift of pixel indices
         '''
 
         # preventing index out of bound
         idx%=len(self.image_filepaths)
         
         # load image
-        image,_=read_image(self.image_filepaths[idx], target_size=self.img_size, correct_exif=self.correct_exif)
+        image,(H0,W0)=read_image(self.image_filepaths[idx], target_size=self.img_size, correct_exif=self.correct_exif)
         height, width=image.shape[:2]
 
         # check image image is not RGB, make it RGB
         if image.ndim==2: image=np.dstack([image]*3) 
             
         # convert data to match target size and change normalized x,y,w,h to x1,y1,x2,y2 in pixel unit
-        img, labels=data_to_target_size(image=image.copy(), labels=self.labels[idx].copy(), target_size=self.img_size, 
+        img, labels, shift=data_to_target_size(image=image.copy(), labels=self.labels[idx].copy(), target_size=self.img_size, 
                                          scale_up=self.augment and np.random.rand()>0.1)
+        shapes=(H0,W0), ((height/H0, width/W0),shift) # # for COCO mAP rescaling
         # print(f'In dataset.coco_dataset.__getitem__ img {img.shape}')
         # print(f'In dataset.coco_dataset.__getitem__ labels x1 {any(x<0 for x in labels[:,1].tolist())} y1 {any(x<0 for x in labels[:,2].tolist())}')
         # print(f'In dataset.coco_dataset.__getitem__ labels x2 {any(x>=img.shape[1] for x in labels[:,3].tolist())} y2 {any(x>=img.shape[0] for x in labels[:,4].tolist())}')
@@ -120,12 +124,12 @@ class LoadImagesAndLabels(torch.utils.data.Dataset):
         img = img.transpose(2, 0, 1)
         img = np.ascontiguousarray(img)
             
-        return torch.from_numpy(img), labels_out, self.image_filepaths[idx]
+        return torch.from_numpy(img), labels_out, self.image_filepaths[idx], shapes
         
     @staticmethod
     def collate_fn(batch):
-        img, label, path = zip(*batch)  # each img, label, path are tuple of item in each batch
+        img, label, path, shapes = zip(*batch)  # each img, label, path are tuple of item in each batch
         for i, l in enumerate(label):
             l[:, 0] = i  # add target-image index so we know which boxes associated with which boxes
-        return torch.stack(img, 0), torch.cat(label, 0), path
+        return torch.stack(img, 0), torch.cat(label, 0), path, shapes
         

@@ -23,9 +23,14 @@ def find_5_positive(prediction, targets, anchors, matching_threshold, inside_gri
         indices (list[tuple[Tensor]]): (image-index, anchor-indices, grid-j, grid-i) per level, each item is 1D tensor of size Q where 
             Q may vary per level. grid-i and grid-j are the top-left corner of grid cell containing objects' center
         anch (list[Tensor]): matched anchors per level, each of size Qx2 where Q may vary but match that of indices for the same level
+        target_class_indices (list[Tensor]): target class indices per level, each of size Q where Q may vary but match that of indices 
+            for the same level
+        target_boxes  (list[Tensor]): Qx4 target boxes per level, each of size Q defined in feature-grid unit where Q may vary but match
+            that of indices for the same level. (x,y,w,h) where x,y are box center and w,h are width/height in feature grid cell unit 
     '''
     # output storage
     indices,anch=[],[]
+    target_boxes,target_class_indices=[],[]
     
     nl,na=anchors.shape[:2] # number of levels and anchors
     nt=targets.shape[0] # number of targets
@@ -103,8 +108,10 @@ def find_5_positive(prediction, targets, anchors, matching_threshold, inside_gri
         indices.append((img_idx, anchor_idx, grid_j.clamp_(0, grid_cell_resolution[3]-1),
                         grid_i.clamp_(0, grid_cell_resolution[2]-1)))
         anch.append(anchors_per_level[anchor_idx]) # anchors
-
-    return indices, anch
+        # grid_xy is the location of box center in feature-cell unit
+        target_boxes.append(torch.cat((grid_xy, grid_wh), dim=1)) # Qx4 #.append(torch.cat((grid_xy-grid_ijs, grid_wh), dim=1) # Qx4 
+        target_class_indices.append(obj_cls) # Q
+    return indices, anch,target_class_indices, target_boxes
 
 def matched_prediction_per_level_per_image(indices, anch, prediction, batch_index, stride):
     '''

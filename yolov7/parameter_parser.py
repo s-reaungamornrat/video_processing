@@ -7,6 +7,7 @@ parser.add_argument('--data', type=str, default='data/coco.yaml', help='data.yam
 parser.add_argument('--hyp', type=str, default='data/hyp.scratch.p5.yaml', help='hyperparameters path')
 parser.add_argument('--epochs', type=int, default=300)
 parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
+parser.add_argument('--nominal-batch-size', type=int, default=64, help='total batch size for all GPUs')
 parser.add_argument('--img-size', nargs='+', type=int, default=[640,640], help='[train test] image sizes')
 #parser.add_argument('--rect', action='store_true',help='rectangular training')
 parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
@@ -35,6 +36,8 @@ parser.add_argument('--save_period', type=int, default=-1, help='log model after
 parser.add_argument('--artifact_alias', type=str, default='latest', help='version of dataset artifact to be used')
 parser.add_argument('--v5-metric', action='store_true', help='assume maximum recall as 1 in AP calculation')
 
+parser.add_argument('--dev-mode', action='store_true', help='development mode, only run training for 1 batch per epoch')
+parser.add_argument('--print-freq', type=int, default=100, help='iteration frequency to print')
 parser.add_argument('--correct-exif', action='store_true', help='whether to correct EXIF orientation')
 parser.add_argument('--n-val-data', type=int, default=None, help='limit number of validation data')
 parser.add_argument('--n-training-data', type=int, default=None, help='limit number of training data')
