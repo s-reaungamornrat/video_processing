@@ -54,7 +54,7 @@ def find_5_positive(prediction, targets, anchors, matching_threshold, inside_gri
         anchors_per_level=anchors[i] # na x 2
 
         # [1,1,W,H,W,H,1]
-        grid_cell_resolution[2:6]=torch.tensor(prediction[i].shape,device=prediction.device)[[3,2,3,2]] # WHWH -> xyxy size
+        grid_cell_resolution[2:6]=torch.tensor(prediction[i].shape,device=targets.device)[[3,2,3,2]] # WHWH -> xyxy size
         
         # multiplying targets by grid_cell_resolution to convert normalize location to location in feature cell grid
         # naxntx7 where 7 is for img-indx, class, x,y,w,h, anchor-indx 
