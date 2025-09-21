@@ -28,7 +28,7 @@ def train_an_epoch(args, model, model_ema, optimizer, train_loss_module, train_l
         # number of accumulated batches used to train model so far since the start
         n_batches=(it-1)+len(train_loader)*(epoch-1) # epoch count from 1
         imgs=imgs.to(device, dtype=torch.float32, non_blocking=True) / 255.0 # uint8 to float32 from 0-255 to 0-1
-    
+        targets=targets.to(device, dtype=torch.float32, non_blocking=True)
         # warm-up
         if n_batches <= n_warmup:
             # simulate large batch size by determine when to accumulate gradients. During warmup, accumulate after every batch

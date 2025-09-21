@@ -54,7 +54,7 @@ def find_5_positive(prediction, targets, anchors, matching_threshold, inside_gri
         anchors_per_level=anchors[i] # na x 2
 
         # [1,1,W,H,W,H,1]
-        grid_cell_resolution[2:6]=torch.tensor(prediction[i].shape)[[3,2,3,2]] # WHWH -> xyxy size
+        grid_cell_resolution[2:6]=torch.tensor(prediction[i].shape,device=prediction.device)[[3,2,3,2]] # WHWH -> xyxy size
         
         # multiplying targets by grid_cell_resolution to convert normalize location to location in feature cell grid
         # naxntx7 where 7 is for img-indx, class, x,y,w,h, anchor-indx 
@@ -147,7 +147,7 @@ def matched_prediction_per_level_per_image(indices, anch, prediction, batch_inde
         all_img_idx.append(img_idx); all_anch_idx.append(anch_idx)
         all_gj.append(gj); all_gi.append(gi)
         all_anch.append(anch[level][b_idx])
-        from_which_layer.append(torch.ones(len(img_idx)) * level)
+        from_which_layer.append(torch.ones(len(img_idx), device=pred_l.device) * level)
 
         # prediction [x,y,w,h,objectness,class_probs...]
         fg_pred=pred_l[img_idx,anch_idx,gj,gi] # len(img_idx)xO foreground/positive predictions

@@ -36,8 +36,8 @@ class LoadImagesAndLabels(torch.utils.data.Dataset):
             relative_image_fpath=file[file.find('images'):]
             relative_label_fpath=os.path.splitext(relative_image_fpath.replace('images', 'labels'))[0]+".txt"
             image_fpath=self.data_dirpath/relative_image_fpath
-            if image_fpath.is_dir(): continue
-            assert image_fpath.is_file(), f'{image_fpath} does not exist'
+            if not image_fpath.is_file(): continue
+            #assert image_fpath.is_file(), f'{image_fpath} does not exist'
             label_fpath=self.data_dirpath/relative_label_fpath
             image_filepaths.append(image_fpath)
             label_filepaths.append(label_fpath if label_fpath.is_file() else None)
