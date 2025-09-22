@@ -87,7 +87,7 @@ def check_prediction_correctness(output, target_boxes, target_class_indices, iou
             detected_target_indices.append(detected_target_idx)
             # check correctness by seeing whether IoU > anu IoU thresholds
             correct[pred_idx[j]]=pairwise_ious[j]>iouv
-            print('correct[pred_idx[j]] ', correct[pred_idx[j]])
+            #print('correct[pred_idx[j]] ', correct[pred_idx[j]])
             if len(detected_target_indices)==len(target_boxes): break # all target get already detected
     return correct
 

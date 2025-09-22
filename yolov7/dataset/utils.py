@@ -27,7 +27,7 @@ def exif_size(img):
     except: pass
     return size
     
-def read_image(image_fpath, target_size, correct_exif, eps=1.e-4):
+def read_image(image_fpath, target_size, correct_exif, eps=1.e-4, mode='linear'):
     '''
     Read an image from file and resize so its large size (either width or height) match target size. 
     Args:
@@ -35,10 +35,12 @@ def read_image(image_fpath, target_size, correct_exif, eps=1.e-4):
         target_size (int): target width and height (YOLO assumes a square image)
         correct_exif (bool): whether to correct for EXIF orientation
         eps (float): zero testing
+        mode (str): interpolation method, i.e., linear or nearest
     Returns:
         image (np.ndarray): HxWxC RGB image where max(H,W)=target_size and H may not equal W
         (H,W) (tuple[int]): original image size
     '''
+    assert mode in ['linear', 'nearest']
     # we use cv2 (rather than torchvision.io.decode_image) because it is faster and we can use
     # cv2.INTER_AREA which yields better downsampled image if downsampling is required
     if correct_exif:
@@ -53,7 +55,8 @@ def read_image(image_fpath, target_size, correct_exif, eps=1.e-4):
     H, W=img.shape[:2] # image size
     ratio=target_size/max(H,W)
     if abs(ratio-1.)>eps:
-        interp=cv2.INTER_AREA if ratio<1. else cv2.INTER_LINEAR
+        if mode=='linear': interp=cv2.INTER_AREA if ratio<1. else cv2.INTER_LINEAR
+        else: interp=cv2.INTER_NEAREST
         img=cv2.resize(img, (int(W*ratio), int(H*ratio)), interpolation=interp)
     return img, (H,W)
     
@@ -138,3 +141,86 @@ def parse_label_files(image_filepaths, label_filepaths):
     annotation['hash']=get_hash(label_filepaths+image_filepaths)
     annotation['info']={'n_found':n_found, 'n_missing':n_missing, 'n_empty':n_empty, 'n_duplicate':n_duplicate, 'total_img_files':i+1}
     return annotation
+
+def image_n_boxes_to_target_size(image, boxes, target_size, scale_up=True, color=(114,114,114), eps=1.e-4):
+    '''
+    Convert an image and boxes to target size. This function returns in-place box modification
+    Args:
+        image (ndarray[uint8]): image
+        boxes (ndarray/Tensor): Nx4 where N is the number of boxes and 4 for x1,y1,x2,y2 in pixel unit
+        target_size (int): target size of square image
+    Returns:
+        image (ndarray[uint8]): image after modification
+        ratio (float): ratio of target_size/original-size for use in converting boxes back via division
+        shift (tuple[float]): translation of boxes due to cropping and padding, i.e., (shift_x, shift_y) in pixel units
+    '''
+    image_size=image.shape[:2] # H,W
+
+    # rescale image
+    ratio=[target_size/i for i in image_size] # H W
+    if not scale_up: ratio=[min(r, 1) for r in ratio]
+    ratio=min(ratio) if np.random.rand()<0.5 else max(ratio) # 1 ratio for both so we preserve relative scale of each objects in image
+    scaled_size=[int(s*ratio) for s  in image_size] # H, W
+    if any(m!=n for m,n in zip(scaled_size,image_size)): image = cv2.resize(image, scaled_size[::-1], interpolation=cv2.INTER_LINEAR)
+    # rescale boxes
+    if len(boxes)>0:  # assuming pixel xyxy format
+        box_widths, box_heights=(boxes[:,2:]-boxes[:,:2]).T  # Nx2 -> 2xN
+        boxes[:,[0,1]]*=ratio
+        boxes[:,2]=boxes[:,0]+ratio*box_widths
+        boxes[:,3]=boxes[:,1]+ratio*box_heights
+
+    #crop if scaled_image is bigger than target size
+    cropw=croph=0
+    if any(s>target_size for s in scaled_size):
+        top_left=[int(np.ceil(s/2 - target_size/2)) for s in image.shape[:2]] # H, W
+        image=image[top_left[0]:target_size+top_left[0], top_left[1]:target_size+top_left[1]]
+        scaled_size=image.shape[:2]
+        cropw,croph=top_left[1], top_left[0]
+        if len(boxes)>0:  # assuming pixel xyxy format
+            boxes[:,[0,2]]-=cropw
+            boxes[:,[1,3]]-=croph
+        
+    # pad if scaled_image smaller than target size
+    difference=[target_size-o for o in scaled_size]
+    padw=padh=0
+    if any(d>eps for d in difference):
+        # divide padding into 2 sides
+        padding=[d/2 for d in difference] # pady, padx
+        top,bottom=int(round(padding[0]-0.1)), int(round(padding[0]+0.1))
+        left,right=int(round(padding[1]-0.1)), int(round(padding[1]+0.1))
+        image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
+        padw,padh=padding[1],padding[0]
+    
+        if len(boxes)>0:  # assuming pixel xyxy format
+            boxes[:,[0,2]]+=padw
+            boxes[:,[1,3]]+=padh
+
+    # check whether boxes are still inside image
+    if len(boxes)>0:  # assuming pixel xyxy format
+        # clip pixel indices
+        boxes[:,[0,2]]=boxes[:,[0,2]].clip(min=0, max=image.shape[1]-1) # width
+        boxes[:,[1,3]]=boxes[:,[1,3]].clip(min=0, max=image.shape[0]-1) # height
+    shift_x, shift_y=padw-cropw, padh-croph
+    return image, ratio, (shift_x, shift_y)
+
+def inverse_image_n_boxes_to_target_size(boxes, ratio, shift_x, shift_y):
+    '''
+    Inverse operations applied to boxes in image_n_boxes_to_target_size
+    Args:
+        boxes (ndarray/Tensor): Nx4 where N is the number of boxes and 4 for x1,y1,x2,y2 in pixel units
+        ratio (float): ratio of target_size/original-size for use in converting boxes back via division
+        shift_x (float): translation of boxes due to cropping and padding along x or width in pixel units
+        shift_y (float): translation of boxes due to cropping and padding along y or height in pixel units
+    Returns:
+        boxes  (ndarray/Tensor): Nx4 where N is the number of boxes and 4 for x1,y1,x2,y2 in pixel units
+    '''
+    boxes=boxes.clone() if isinstance(boxes, torch.Tensor) else np.copy(boxes)
+    boxes[:,[0,2]]-=shift_x
+    boxes[:,[1,3]]-=shift_y
+    width,height=(boxes[:,2:]-boxes[:,:2]).T
+    width/=ratio
+    height/=ratio
+    boxes[:,[0,1]]/=ratio
+    boxes[:,2]=boxes[:,0]+width
+    boxes[:,3]=boxes[:,1]+height
+    return boxes

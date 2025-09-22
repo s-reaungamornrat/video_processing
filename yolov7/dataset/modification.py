@@ -52,6 +52,8 @@ def random_affine(img, targets, degrees=0., translate=0.2, scale=0.9, padding_va
         translate (float): offset to half pixel ratio to width and height
         scale (float): offset to 1 scaling
         padding_value (tuple[uint8]): padding value
+    Returns:
+        targets (ndarray[float32]): Nx5 where N is the number of boxes and 5 for class, x1,y1,x2,y2 in pixel units
     '''
     height, width=img.shape[:2]
 
