@@ -53,7 +53,7 @@ def read_image(image_fpath, target_size, correct_exif, eps=1.e-4, mode='linear')
         img= cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # RGB HxWx3
         
     H, W=img.shape[:2] # image size
-    print('target_size ', target_size, ' max(H,W) ', max(H,W))
+    #print('target_size ', target_size, ' max(H,W) ', max(H,W))
     ratio=target_size/max(H,W)
     if abs(ratio-1.)>eps:
         if mode=='linear': interp=cv2.INTER_AREA if ratio<1. else cv2.INTER_LINEAR
