@@ -118,8 +118,7 @@ def main(args, hyp, data_dict):
 
         # validation
         results, maps, txt=validation(model=model_ema.ema, dataloader=val_loader, val_loss_module=val_loss_module, hyp=hyp, 
-                                 n_classes=1 if args.single_cls else int(data_dict['nc']), conf_thres=0.001, iou_thres=0.6, verbose=False,
-                                 n_its=1 if args.dev_mode else None)
+                                      conf_thres=0.001, iou_thres=0.6, verbose=False, n_its=1 if args.dev_mode else None)
         
         # compute model fitness as a weighted combination of [P, R, mAP@.5, mAP@.5-.95]
         w = [0.0, 0.0, 0.1, 0.9]  # weights for [P, R, mAP@0.5, mAP@0.5:0.95]

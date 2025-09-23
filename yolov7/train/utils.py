@@ -58,7 +58,7 @@ def train_an_epoch(args, model, model_ema, optimizer, train_loss_module, train_l
         # print
         if args.print_freq>0 and args.print_freq % it==0:
             mem='%.3gG' % (torch.cuda.memory_reserved()/1E9 if torch.cuda.is_available() else 0) # GB
-            print('{}: {} | {}'.format(it,
+            print('{} [{:.2f}%]: {} | {}'.format(it, 100*it/len(train_loader),
                                           ', '.join(f'{n}:{l:.3f}' for n, l in zip('loss, w-bb,w-obj,w-cls'.split(','),mean_weighted_loss.cpu().tolist())),
                                           ', '.join(f'{n}:{l:.3f}' for n, l in zip('bb,obj,cls'.split(','),mean_unweigthed_loss.cpu().tolist())) )
                   )

@@ -2,13 +2,16 @@ import os
 import sys
 import cv2
 import yaml
+import numbers
+
 import torch
 import torchvision
 from torchvision.ops.boxes import masks_to_boxes
 
 import numpy as np
+from PIL import Image
 
-from video_processing.yolov7.dataset.utils import read_image, image_n_boxes_to_target_size
+from video_processing.yolov7.dataset.utils import read_image, image_n_boxes_to_target_size, exif_size
 from video_processing.yolov7.dataset.coords import xyxy2xywh
 from video_processing.yolov7.dataset.modification import random_affine, augment_hsv
 
@@ -23,7 +26,10 @@ class PennFudanDataset(torch.utils.data.Dataset):
             mask_dirname (str): name of subfolder containing masks
             hyp (dict): hyperparameters for data augmentation
             indices (sequence): indices to data used
+            img_size (int): input image size
         '''
+        assert isinstance(img_size, numbers.Number), f'img_size must be integer since the model assume a square input image'
+        
         self.augment=augment
         self.img_size=img_size
         self.hyp=hyp
@@ -39,12 +45,17 @@ class PennFudanDataset(torch.utils.data.Dataset):
             self.image_fnames=[self.image_fnames[idx] for idx in indices]
             self.mask_fnames=[self.mask_fnames[idx] for idx in indices]
 
-        # make sure that files are ordered consistently
-        for im, msk in zip(self.image_fnames, self.mask_fnames):
-            im=im.decode('utf-8')
-            msk=msk.decode('utf-8')
-            assert all(os.path.splitext(im)[0]==os.path.splitext(x)[0].replace('_mask', '') for x in [msk])
-
+        # make sure that files are ordered consistently and record image size
+        image_sizes=[]
+        for im_file, msk_file in zip(self.image_fnames, self.mask_fnames):
+            im_file=im_file.decode('utf-8')
+            msk_file=msk_file.decode('utf-8')
+            assert all(os.path.splitext(im_file)[0]==os.path.splitext(x)[0].replace('_mask', '') for x in [msk_file])
+            # get image size
+            image_sizes.append(exif_size(Image.open(os.path.join(self.image_dirpath.decode('utf-8'), im_file))))
+            
+        self.image_sizes=np.array(image_sizes, dtype=np.float64) # Nx2 where N is the number of images and 2 for width, height in this order
+        
     def __len__(self):
         return len(self.image_fnames)
 
@@ -113,5 +124,12 @@ class PennFudanDataset(torch.utils.data.Dataset):
         image = image.transpose(2, 0, 1)
         image = np.ascontiguousarray(image)
 
-        ratio=shift_y=shift_x=None
         return torch.from_numpy(image), labels, ratio, (shift_x, shift_y)
+
+    @staticmethod
+    def collate_fn(batch):
+        images, labels, ratios, shifts = zip(*batch)  # each img, label, path are tuple of item in each batch
+        for i, l in enumerate(labels):
+            l[:, 0] = i  # add target-image index so we know which boxes associated with which images
+        return torch.stack(images, 0), torch.cat(labels, 0), ratios, shifts
+        

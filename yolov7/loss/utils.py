@@ -243,6 +243,7 @@ def determine_matching_targets(prediction, targets, indices, anch, stride, image
         dynamic_ks=torch.clamp(top_k.sum(1).int(), min=1) # guarantees a minimum of 1 positive match/anchor per GT box
         
         # NxNc -> Nx1xNc -> NxQxNc
+        #print(f'In loss.utils.determine_matching_targets this_target[:,1] {this_target[:,1]}, n_classes {n_classes}')
         gt_cls_per_img=F.one_hot(this_target[:,1].to(dtype=torch.int64), n_classes).float().unsqueeze(1).repeat(1, pxyxys.shape[0], 1)
         # NxNc -> 1xQxNc -> NxQxNc
         p_cls=p_cls.float().unsqueeze(0).repeat(this_target.shape[0],1,1).sigmoid()

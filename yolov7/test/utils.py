@@ -92,11 +92,13 @@ def check_prediction_correctness(output, target_boxes, target_class_indices, iou
     return correct
 
 @torch.no_grad()
-def validation(model, dataloader, val_loss_module, hyp, n_classes, conf_thres=0.001, iou_thres=0.6,verbose=False, n_its=None):
+def validation(model, dataloader, val_loss_module, hyp, conf_thres=0.001, iou_thres=0.6,verbose=False, n_its=None):
 
+    model.eval()
+    
     device=next(model.parameters()).device
 
-    nc=n_classes # number of classes
+    nc=model.nc # number of classes
 
     # iou vector for mAP@0.5:0.95
     iouv=torch.linspace(0.5, 0.95, 10).to(device) # 10 elements
@@ -162,3 +164,28 @@ def validation(model, dataloader, val_loss_module, hyp, n_classes, conf_thres=0.
     for i, c in enumerate(ap_class): maps[c]=ap[i]
         
     return (mp, mr, map50, map, mean_weighted_loss.cpu(), mean_unweighted_loss.cpu()), maps, txt
+
+@torch.no_grad()
+def validate(model, dataloader, val_loss_module, hyp, n_its=None):
+
+    model.eval()
+    
+    device=next(model.parameters()).device
+    
+    mean_weighted_loss=torch.zeros(4, device=device)
+    mean_unweighted_loss=torch.zeros(3, device=device)
+    
+    for b_idx, (imgs, targets, ratios, shifts) in enumerate(dataloader, 1):
+        
+        if n_its is not None and b_idx>n_its: break # developing mode, stop early
+            
+        imgs=imgs.to(device=device, dtype=torch.float32, non_blocking=True)/255.
+        targets=targets.to(device=device)
+
+        formatted_outputs, raw_outputs=model(imgs)
+        loss, weighted_losses, unweighted_losses=val_loss_module(raw_outputs, targets, images=imgs,matching_threshold=hyp['anchor_t'],
+                                                                 box_weight=hyp['box'], obj_weight=hyp['obj'],  cls_weight=hyp['cls'])
+        mean_weighted_loss=(mean_weighted_loss*b_idx + weighted_losses)/(b_idx+1) 
+        mean_unweighted_loss=(mean_unweighted_loss*b_idx + unweighted_losses)/(b_idx+1)
+    
+    return mean_weighted_loss, mean_unweighted_loss

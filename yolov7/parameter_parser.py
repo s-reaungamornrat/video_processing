@@ -41,6 +41,8 @@ parser.add_argument('--print-freq', type=int, default=100, help='iteration frequ
 parser.add_argument('--correct-exif', action='store_true', help='whether to correct EXIF orientation')
 parser.add_argument('--n-val-data', type=int, default=None, help='limit number of validation data')
 parser.add_argument('--n-training-data', type=int, default=None, help='limit number of training data')
+parser.add_argument('--image-dirname', type=str, default='PNGImages', help='image folder name of Penn Fandu')
+parser.add_argument('--mask-dirname', type=str, default='PedMasks', help='mask folder name of Penn Fandu')
 parser.add_argument('--data-dirpath', type=str, default=None, help='main data directory containing labels/ and images/ folders')
 parser.add_argument('--output-dirpath', type=str, default=None, help='output directory')
 parser.add_argument('--checkpoint-dirname', type=str, default='checkpoints', help='check point directory')
