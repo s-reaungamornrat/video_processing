@@ -36,6 +36,7 @@ parser.add_argument('--save_period', type=int, default=-1, help='log model after
 parser.add_argument('--artifact_alias', type=str, default='latest', help='version of dataset artifact to be used')
 parser.add_argument('--v5-metric', action='store_true', help='assume maximum recall as 1 in AP calculation')
 
+parser.add_argument('--train-log', type=str, default='train.log', help='record training and validation loss')
 parser.add_argument('--dev-mode', action='store_true', help='development mode, only run training for 1 batch per epoch')
 parser.add_argument('--print-freq', type=int, default=100, help='iteration frequency to print')
 parser.add_argument('--correct-exif', action='store_true', help='whether to correct EXIF orientation')

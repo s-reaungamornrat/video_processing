@@ -20,12 +20,12 @@ class ModelEMA:
         self.updates+=1
         decay=self.decay(self.updates)
         model_state_dict=model.state_dict()
-        print('update ema')
+        #print('update ema')
         for k, v in self.ema.state_dict().items():
             if not v.dtype.is_floating_point: continue
-            print('({:.3f},{:.3f})'.format(v.min().item(), v.max().item()), end=',')
+            #print('({:.3f},{:.3f})'.format(v.min().item(), v.max().item()), end=',')
             v=decay*v+(1.-decay)*model_state_dict[k].detach()
-            print('({:.3f},{:.3f})'.format(v.min().item(), v.max().item()))
+            #print('({:.3f},{:.3f})'.format(v.min().item(), v.max().item()))
     def update_attr(self, model, include=(), exclude=('process_group', 'reducer')):
         '''
         Copy attribute from model to ema

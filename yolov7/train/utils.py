@@ -16,6 +16,7 @@ def train_an_epoch(args, model, model_ema, optimizer, train_loss_module, train_l
     '''
     # number of warmup iterations, e.g., max(3 epochs, 1K iterations)
     n_warmup=max(model.hyp['warmup_epochs']*len(train_loader), 1000)
+    print(f'In train.utils n_warmup {n_warmup}')
 
     device=next(model.parameters()).device
     
@@ -23,7 +24,7 @@ def train_an_epoch(args, model, model_ema, optimizer, train_loss_module, train_l
     mean_weighted_loss=torch.zeros(4, device=device) # loss, and weighted box_loss, objectness_loss, class_loss
     mean_unweigthed_loss=torch.zeros(3, device=device) # box_loss, objectness_loss, class_loss
     
-    accumulate=1
+    accumulate=None
     optimizer.zero_grad() # we will simulate large batch size
     for it, (imgs, targets, paths, _) in enumerate(train_loader, 1):
         # number of accumulated batches used to train model so far since the start
@@ -48,7 +49,7 @@ def train_an_epoch(args, model, model_ema, optimizer, train_loss_module, train_l
                                                                cls_weight=model.hyp['cls'])
         # backward
         loss.backward()
-        if n_batches%accumulate==0: # update parameters
+        if accumulate is None or n_batches%accumulate==0: # update parameters
             optimizer.step()
             optimizer.zero_grad()
             if model_ema is not None: model_ema.update(model)
@@ -59,9 +60,10 @@ def train_an_epoch(args, model, model_ema, optimizer, train_loss_module, train_l
         # print
         if args.print_freq>0 and it%args.print_freq==0:
             mem='%.3gG' % (torch.cuda.memory_reserved()/1E9 if torch.cuda.is_available() else 0) # GB
-            print('{} [{:.2f}%]: {} | {}'.format(it, 100*it/len(train_loader),
+            print('{} [{:.2f}%]: {} | {} | acc {}'.format(it, 100*it/len(train_loader),
                                           ', '.join(f'{n}:{l:.3f}' for n, l in zip('loss, w-bb,w-obj,w-cls'.split(','),mean_weighted_loss.cpu().tolist())),
-                                          ', '.join(f'{n}:{l:.3f}' for n, l in zip('bb,obj,cls'.split(','),mean_unweigthed_loss.cpu().tolist())) )
+                                          ', '.join(f'{n}:{l:.3f}' for n, l in zip('bb,obj,cls'.split(','),mean_unweigthed_loss.cpu().tolist())),
+                                                          accumulate)
                   )
         if args.dev_mode: break
             
